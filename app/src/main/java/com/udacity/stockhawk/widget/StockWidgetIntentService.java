@@ -9,6 +9,9 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
+import android.util.DisplayMetrics;
+import android.util.TypedValue;
 import android.widget.RemoteViews;
 
 import com.udacity.stockhawk.R;
@@ -26,9 +29,9 @@ public class StockWidgetIntentService extends IntentService {
             Contract.Quote.COLUMN_PRICE
     };
     // these indices must match the projection
-    private static final int INDEX_COLUMN_SYMBOL = 1;
-    private static final int INDEX_PERCENTAGE_CHANGE = 2;
-    private static final int INDEX_PRICE = 4;
+    private static final int INDEX_COLUMN_SYMBOL = 0;
+    private static final int INDEX_COLUMN_PERCENTAGE_CHANGE = 1;
+    private static final int INDEX_COLUMN_PRICE = 2;
 
     public StockWidgetIntentService() {
         super("StockWidgetIntentService");
@@ -55,11 +58,22 @@ public class StockWidgetIntentService extends IntentService {
 
         // Extract the weather data from the Cursor
         String symbol = data.getString(INDEX_COLUMN_SYMBOL);
+        String percentageChange = data.getString(INDEX_COLUMN_PERCENTAGE_CHANGE);
         data.close();
 
         // Perform this loop procedure for each Today widget
         for (int appWidgetId : appWidgetIds) {
-            int layoutId = R.layout.widget_stock;
+
+            int widgetWidth = getWidgetWidth(appWidgetManager, appWidgetId);
+            int defaultWidth = getResources().getDimensionPixelSize(R.dimen.widget_stock_default_width);
+            int largeWidth = getResources().getDimensionPixelSize(R.dimen.widget_stock_large_width);
+            int layoutId;
+            if (widgetWidth >= largeWidth) {
+                layoutId = R.layout.widget_stock_large;
+            } else {
+                layoutId = R.layout.widget_stock;
+            }
+
             RemoteViews views = new RemoteViews(getPackageName(), layoutId);
 
             // Add the data to the RemoteViews
@@ -70,6 +84,7 @@ public class StockWidgetIntentService extends IntentService {
                 setRemoteContentDescription(views, "TEST2");
             }
             views.setTextViewText(R.id.widget_symbol, symbol);
+            views.setTextViewText(R.id.widget_percentage_change, percentageChange);
 
             // Create an Intent to launch MainActivity
             Intent launchIntent = new Intent(this, MainActivity.class);
@@ -84,5 +99,28 @@ public class StockWidgetIntentService extends IntentService {
     @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1)
     private void setRemoteContentDescription(RemoteViews views, String description) {
         views.setContentDescription(R.id.widget_icon, description);
+    }
+
+    private int getWidgetWidth(AppWidgetManager appWidgetManager, int appWidgetId) {
+        // Prior to Jelly Bean, widgets were always their default size
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
+            return getResources().getDimensionPixelSize(R.dimen.widget_stock_default_width);
+        }
+        // For Jelly Bean and higher devices, widgets can be resized - the current size can be
+        // retrieved from the newly added App Widget Options
+        return getWidgetWidthFromOptions(appWidgetManager, appWidgetId);
+    }
+
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+    private int getWidgetWidthFromOptions(AppWidgetManager appWidgetManager, int appWidgetId) {
+        Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
+        if (options.containsKey(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)) {
+            int minWidthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH);
+            // The width returned is in dp, but we'll convert it to pixels to match the other widths
+            DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
+            return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, minWidthDp,
+                    displayMetrics);
+        }
+        return  getResources().getDimensionPixelSize(R.dimen.widget_stock_default_width);
     }
 }

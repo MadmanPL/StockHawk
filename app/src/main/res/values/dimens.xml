@@ -3,4 +3,8 @@
 
     <dimen name="widget_stock_default_width">40dp</dimen>
     <dimen name="widget_stock_default_height">40dp</dimen>
+
+    <dimen name="widget_stock_min_resize_width">40dp</dimen>
+    <dimen name="widget_stock_min_resize_height">@dimen/widget_stock_default_height</dimen>
+    <dimen name="widget_stock_large_width">220dp</dimen>
 </resources>
